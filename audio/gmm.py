@@ -1,28 +1,31 @@
-from glob import glob
 import librosa
-from librosa.feature import mfcc
 import numpy as np
-from numpy.random import randint
+import os.path
+
+from glob import glob
 from ikrlib import train_gmm
+from librosa.feature import mfcc
+from numpy.random import randint
 
 SAMPLE_RATE = 16000
 GMM_COMPONENTS = 16
 ITERATIONS = 10
 
 
-def load_recordings(dir_name, n_mfcc=13, initial_pause=1.7):
+def load_recordings(dir_name: str, n_mfcc=13, initial_pause=1.7) -> list[tuple[str, np.ndarray]]:
     """
     Load all *.wav files sampled at `SAMPLE_RATE` from directory `dir_name`, convert them into MFCC features and
-    return them as array.
+    return them as array of tuples [(segment_name, mfcc)].
 
     First `INITIAL_PAUSE` seconds of each recording are removed.
     """
     mfccs = []
     for f in glob(dir_name + '/*.wav'):
+        segment_name = os.path.basename(f)
         waveform, sr = librosa.load(f, sr=None)
         assert sr == SAMPLE_RATE
         waveform = waveform[int(initial_pause * sr):]
-        mfccs.append(mfcc(y=waveform, sr=sr, n_mfcc=n_mfcc))
+        mfccs.append((segment_name, mfcc(y=waveform, sr=sr, n_mfcc=n_mfcc)))
 
     return mfccs
 
@@ -31,6 +34,8 @@ if __name__ == '__main__':
     targets = load_recordings("data/target_train")
     non_targets = load_recordings("data/non_target_train")
 
+    targets = [x for _, x in targets]
+    non_targets = [x for _, x in non_targets]
     targets = np.concatenate(targets, axis=1).T
     non_targets = np.concatenate(non_targets, axis=1).T
 
