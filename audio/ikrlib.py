@@ -15,13 +15,26 @@ import scipy.fftpack
 
 # Gaussian distributions related functions
 
+
 def logpdf_gauss(x, mu, cov):
-    assert (mu.ndim == 1 and len(mu) == len(cov) and (cov.ndim == 1 or cov.shape[0] == cov.shape[1]))
+    assert (
+        mu.ndim == 1
+        and len(mu) == len(cov)
+        and (cov.ndim == 1 or cov.shape[0] == cov.shape[1])
+    )
     x = np.atleast_2d(x) - mu
     if cov.ndim == 1:
-        return -0.5 * (len(mu) * np.log(2 * pi) + np.sum(np.log(cov)) + np.sum((x ** 2) / cov, axis=1))
+        return -0.5 * (
+            len(mu) * np.log(2 * pi)
+            + np.sum(np.log(cov))
+            + np.sum((x**2) / cov, axis=1)
+        )
     else:
-        return -0.5 * (len(mu) * np.log(2 * pi) + np.linalg.slogdet(cov)[1] + np.sum(x.dot(inv(cov)) * x, axis=1))
+        return -0.5 * (
+            len(mu) * np.log(2 * pi)
+            + np.linalg.slogdet(cov)[1]
+            + np.sum(x.dot(inv(cov)) * x, axis=1)
+        )
 
 
 def train_gauss(x):
@@ -36,15 +49,23 @@ def train_gauss(x):
 def rand_gauss(n, mu, cov):
     if cov.ndim == 1:
         cov = np.diag(cov)
-    assert (mu.ndim == 1 and len(mu) == len(cov) and cov.ndim == 2 and cov.shape[0] == cov.shape[1])
+    assert (
+        mu.ndim == 1
+        and len(mu) == len(cov)
+        and cov.ndim == 2
+        and cov.shape[0] == cov.shape[1]
+    )
     d, v = eigh(cov)
     return (randn(n, len(mu)) * np.sqrt(d)).dot(v) + mu
 
 
 # GMM distributions related functions
 
+
 def logpdf_gmm(x, ws, mus, covs):
-    return logsumexp([np.log(w) + logpdf_gauss(x, m, c) for w, m, c in zip(ws, mus, covs)], axis=0)
+    return logsumexp(
+        [np.log(w) + logpdf_gauss(x, m, c) for w, m, c in zip(ws, mus, covs)], axis=0
+    )
 
 
 def train_gmm(x, ws, mus, covs):
@@ -59,7 +80,9 @@ def train_gmm(x, ws, mus, covs):
     matrix MUs, covariance matrices given by M-by-D-by-D matrix COVs and vector
     of weights Ws.
     """
-    gamma = np.vstack([np.log(w) + logpdf_gauss(x, m, c) for w, m, c in zip(ws, mus, covs)])
+    gamma = np.vstack(
+        [np.log(w) + logpdf_gauss(x, m, c) for w, m, c in zip(ws, mus, covs)]
+    )
     logevidence = logsumexp(gamma, axis=0)
     gamma = np.exp(gamma - logevidence)
     tll = logevidence.sum()
@@ -68,10 +91,14 @@ def train_gmm(x, ws, mus, covs):
     mus = gamma.dot(x) / gammasum[:, np.newaxis]
 
     if covs[0].ndim == 1:  # diagonal covariance matrices
-        covs = gamma.dot(x ** 2) / gammasum[:, np.newaxis] - mus ** 2
+        covs = gamma.dot(x**2) / gammasum[:, np.newaxis] - mus**2
     else:
         covs = np.array(
-            [(gamma[i] * x.T).dot(x) / gammasum[i] - mus[i][:, newaxis].dot(mus[[i]]) for i in range(len(ws))])
+            [
+                (gamma[i] * x.T).dot(x) / gammasum[i] - mus[i][:, newaxis].dot(mus[[i]])
+                for i in range(len(ws))
+            ]
+        )
     return ws, mus, covs, tll
 
 
@@ -84,13 +111,14 @@ def rand_gmm(n, ws, mus, covs):
     by rows of M-by-D matrix MUs, covariance matrices given by M-by-D-by-D
     matrix COVs and vector of weights Ws.
     """
-    ws = np.random.multinomial(n, ws);
+    ws = np.random.multinomial(n, ws)
     x = np.vstack([rand_gauss(w, m, c) for w, m, c in zip(ws, mus, covs)])
     np.random.shuffle(x)
     return x
 
 
 # Linear classifiers
+
 
 def train_generative_linear_classifier(x, class_id):
     true_data = x[class_id == 1]
@@ -101,7 +129,9 @@ def train_generative_linear_classifier(x, class_id):
 
     data_cov = (true_cov * len(true_data) + false_cov * len(false_data)) / len(x)
     inv_cov = np.linalg.inv(data_cov)
-    w0 = -0.5 * true_mean.dot(inv_cov).dot(true_mean) + 0.5 * false_mean.dot(inv_cov).dot(false_mean)
+    w0 = -0.5 * true_mean.dot(inv_cov).dot(true_mean) + 0.5 * false_mean.dot(
+        inv_cov
+    ).dot(false_mean)
     w = inv_cov.dot(true_mean - false_mean)
     return w, w0, data_cov
 
@@ -128,6 +158,7 @@ def train_linear_logistic_regression_GD(x, class_ids, wold, w0old, learning_rate
 
 
 #  Neural network binary classifier
+
 
 def logistic_sigmoid(a):
     return 1 / (1 + np.exp(-a))
@@ -169,12 +200,13 @@ def train_nnet(X, T, w1, w2, epsilon):
 
 # Speech feature extraction (spectrogram, mfcc, ...)
 
+
 def mel_inv(x):
-    return (np.exp(x / 1127.) - 1.) * 700.
+    return (np.exp(x / 1127.0) - 1.0) * 700.0
 
 
 def mel(x):
-    return 1127. * np.log(1. + x / 700.)
+    return 1127.0 * np.log(1.0 + x / 700.0)
 
 
 def mel_filter_bank(nfft, nbands, fs, fstart=0, fend=None):
@@ -188,11 +220,17 @@ def mel_filter_bank(nfft, nbands, fs, fstart=0, fend=None):
     if not fend:
         fend = 0.5 * fs
 
-    cbin = np.round(mel_inv(np.linspace(mel(fstart), mel(fend), nbands + 2)) / fs * nfft).astype(int)
+    cbin = np.round(
+        mel_inv(np.linspace(mel(fstart), mel(fend), nbands + 2)) / fs * nfft
+    ).astype(int)
     mfb = np.zeros((nfft / 2 + 1, int(nbands)))
     for ii in xrange(nbands):
-        mfb[cbin[ii]:  cbin[ii + 1] + 1, ii] = np.linspace(0., 1., cbin[ii + 1] - cbin[ii] + 1)
-        mfb[cbin[ii + 1]:cbin[ii + 2] + 1, ii] = np.linspace(1., 0., cbin[ii + 2] - cbin[ii + 1] + 1)
+        mfb[cbin[ii] : cbin[ii + 1] + 1, ii] = np.linspace(
+            0.0, 1.0, cbin[ii + 1] - cbin[ii] + 1
+        )
+        mfb[cbin[ii + 1] : cbin[ii + 2] + 1, ii] = np.linspace(
+            1.0, 0.0, cbin[ii + 2] - cbin[ii + 1] + 1
+        )
     return mfb
 
 
@@ -203,12 +241,15 @@ def framing(a, window, shift=1):
 
 
 def spectrogram(x, window, noverlap=None, nfft=None):
-    if np.isscalar(window): window = np.hamming(window)
-    if noverlap is None:    noverlap = window.size / 2
-    if nfft is None:    nfft = window.size
+    if np.isscalar(window):
+        window = np.hamming(window)
+    if noverlap is None:
+        noverlap = window.size / 2
+    if nfft is None:
+        nfft = window.size
     x = framing(x, window.size, window.size - noverlap)
     x = scipy.fftpack.fft(x * window, nfft)
-    return x[:, :x.shape[1] / 2 + 1]
+    return x[:, : x.shape[1] / 2 + 1]
 
 
 def mfcc(s, window, noverlap, nfft, fs, nbanks, nceps):
@@ -235,7 +276,9 @@ def mfcc(s, window, noverlap, nfft, fs, nbanks, nceps):
     s = s + noise.dot(norm(s, 2)) / norm(noise, 2) / (10 ** (snrdb / 20))
 
     mfb = mel_filter_bank(nfft, nbanks, fs, 32)
-    dct_mx = scipy.fftpack.idct(np.eye(nceps, nbanks), norm='ortho')  # the same DCT as in matlab
+    dct_mx = scipy.fftpack.idct(
+        np.eye(nceps, nbanks), norm="ortho"
+    )  # the same DCT as in matlab
 
     S = spectrogram(s, window, noverlap, nfft)
     return dct_mx.dot(np.log(mfb.T.dot(np.abs(S.T)))).T
@@ -248,9 +291,11 @@ def raw8khz2mfcc(dir_name):
     Keys are the file names and values and 2D numpy arrays of MFCC features.
     """
     features = {}
-    for f in glob(dir_name + '/*.raw'):
-        print('Processing file: ', f)
-        features[f] = mfcc(np.fromfile(f, np.int16, -1, ''), 200, 120, 256, 8000, 23, 13)
+    for f in glob(dir_name + "/*.raw"):
+        print("Processing file: ", f)
+        features[f] = mfcc(
+            np.fromfile(f, np.int16, -1, ""), 200, 120, 256, 8000, 23, 13
+        )
     return features
 
 
@@ -261,9 +306,9 @@ def wav16khz2mfcc(dir_name):
     and values and 2D numpy arrays of MFCC features.
     """
     features = {}
-    for f in glob(dir_name + '/*.wav'):
-        print('Processing file: ', f)
+    for f in glob(dir_name + "/*.wav"):
+        print("Processing file: ", f)
         rate, s = wavfile.read(f)
-        assert (rate == 16000)
+        assert rate == 16000
         features[f] = mfcc(s, 400, 240, 512, 16000, 23, 13)
     return features
