@@ -1,3 +1,4 @@
+audiomentations
 jupyter
 librosa
 numpy

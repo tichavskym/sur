@@ -1,6 +1,9 @@
 # Dataset
 data/*
 
+# Augmnentation database
+RIRS_NOISES/*
+
 # Jupyter Notebook
 .ipynb_checkpoints
 

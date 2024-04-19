@@ -6,14 +6,59 @@ from ikrlib import train_gmm, logpdf_gmm
 from librosa.feature import mfcc
 from pathlib import Path
 from numpy.random import randint
+from audiomentations import ApplyImpulseResponse, AddBackgroundNoise, PolarityInversion
 
 SAMPLE_RATE = 16000
 GMM_COMPONENTS = 16
-ITERATIONS = 10
+ITERATIONS = 25
+
+
+def augment_data(name: str, waveform: np.ndarray) -> list[(str, np.ndarray)]:
+    """
+    Augment data.
+    """
+    augmented = []
+
+    # Keep the original recording
+    augmented.append((name, waveform))
+
+    # Augment adding Gaussian noise
+    augmented.append(
+        (f"{name}_gaussian_noise", waveform + np.random.normal(0, 0.1, waveform.shape))
+    )
+
+    # Augment using the time stretching (change of speed)
+    rnd_speed = np.random.uniform(0.7, 1.3)
+    augmented.append(
+        (f"{name}_speed", librosa.effects.time_stretch(y=waveform, rate=rnd_speed))
+    )
+
+    # Augment adding Room Impulse Response
+    rir_augment = ApplyImpulseResponse(
+        ir_path="RIRS_NOISES/real_rirs_isotropic_noises", p=1.0
+    )
+    augmented.append((f"{name}_rir", rir_augment(waveform, sample_rate=SAMPLE_RATE)))
+
+    # Augment adding background noise
+    background_noise = AddBackgroundNoise(
+        sounds_path="RIRS_NOISES/pointsource_noises",
+        min_snr_in_db=3.0,
+        max_snr_in_db=30.0,
+        noise_transform=PolarityInversion(p=0.5),
+        p=1.0,
+    )
+    augmented.append(
+        (
+            f"{name}_background_noise",
+            background_noise(waveform, sample_rate=SAMPLE_RATE),
+        )
+    )
+
+    return augmented
 
 
 def load_recordings(
-    dir_name: str, n_mfcc=13, initial_pause=1.7
+    dir_name: str, n_mfcc=13, initial_pause=1.7, augmentation=False
 ) -> list[tuple[str, np.ndarray]]:
     """
     Load all *.wav files sampled at `SAMPLE_RATE` from directory `dir_name`, convert them into MFCC features and
@@ -21,13 +66,23 @@ def load_recordings(
 
     First `INITIAL_PAUSE` seconds of each recording are removed.
     """
-    mfccs = []
+    waveforms = []
     for f in glob(dir_name + "/*.wav"):
         segment_name = Path(f).stem
         waveform, sr = librosa.load(f, sr=None)
         assert sr == SAMPLE_RATE
-        waveform = waveform[int(initial_pause * sr) :]
-        mfccs.append((segment_name, mfcc(y=waveform, sr=sr, n_mfcc=n_mfcc)))
+
+        waveforms.append((segment_name, waveform[int(initial_pause * sr) :]))
+
+    augmented = []
+    if augmentation:
+        for segment_name, waveform in waveforms:
+            augmented.extend(augment_data(segment_name, waveform))
+        waveforms = augmented
+
+    mfccs = []
+    for s, w in waveforms:
+        mfccs.append((s, mfcc(y=w, sr=SAMPLE_RATE, n_mfcc=n_mfcc)))
 
     return mfccs
 
@@ -56,11 +111,12 @@ def evaluate(
 
 if __name__ == "__main__":
     # Training
-    targets = load_recordings("data/target_train")
-    non_targets = load_recordings("data/non_target_train")
+    targets = load_recordings("data/target_train", augmentation=True)
+    non_targets = load_recordings("data/non_target_train", augmentation=True)
 
     targets = [x for _, x in targets]
     non_targets = [x for _, x in non_targets]
+
     targets = np.concatenate(targets, axis=1).T
     non_targets = np.concatenate(non_targets, axis=1).T
 
@@ -85,6 +141,5 @@ if __name__ == "__main__":
     # Evaluation
     recordings = load_recordings("data/target_dev")
     evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
-    print()
     recordings = load_recordings("data/non_target_dev")
     evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
