@@ -1,6 +1,6 @@
 # SUR
 
-People detection based on voice recordings and head shot images
+People detection based on voice recordings and headshot images
 
 ## Development setup
 
@@ -18,8 +18,14 @@ and extract it into `RIRS_NOISES/` directory.
 
 ## Usage
 
-To launch training of Gaussian Mixture Model (GMM) for speaker recognition, run the following command:
+To train and evaluate Gaussian Mixture Model (GMM) for speaker recognition, run the following commands:
 
 ```sh
-python audio/gmm.py
+# Train your model
+python audio/gmm.py train gmm_model.npz
+
+# Evaluate your model
+# WARNING: never load models from untrusted sources, loading of the model is not secure against erroneous 
+# or maliciously constructed data (uses pickle.load under the hood)
+python audio/gmm.py eval gmm_model.npz
 ```

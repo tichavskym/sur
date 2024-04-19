@@ -1,3 +1,5 @@
+import argparse
+
 import librosa
 import numpy as np
 
@@ -109,37 +111,74 @@ def evaluate(
         print(f"{segment_name} {score} {decision}")
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="subcommand")
+    train = subparsers.add_parser("train")
+    train.add_argument("model_filename")
+    evaluate = subparsers.add_parser("eval")
+    evaluate.add_argument("model_filename")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    # Training
-    targets = load_recordings("data/target_train", augmentation=True)
-    non_targets = load_recordings("data/non_target_train", augmentation=True)
+    args = parse_arguments()
 
-    targets = [x for _, x in targets]
-    non_targets = [x for _, x in non_targets]
+    if args.subcommand == "train":
+        # Training
+        targets = load_recordings("data/target_train", augmentation=True)
+        non_targets = load_recordings("data/non_target_train", augmentation=True)
 
-    targets = np.concatenate(targets, axis=1).T
-    non_targets = np.concatenate(non_targets, axis=1).T
+        targets = [x for _, x in targets]
+        non_targets = [x for _, x in non_targets]
 
-    # Initiate means, covariances, and weights for GMM
-    means = targets[randint(0, len(targets), GMM_COMPONENTS)]
-    avg_cov = np.cov(targets.T, bias=True)
-    covs = np.array([avg_cov] * GMM_COMPONENTS)
-    weights = np.ones(GMM_COMPONENTS) / GMM_COMPONENTS
+        targets = np.concatenate(targets, axis=1).T
+        non_targets = np.concatenate(non_targets, axis=1).T
 
-    nmeans = non_targets[randint(0, len(non_targets), GMM_COMPONENTS)]
-    navg_cov = np.cov(non_targets.T, bias=True)
-    ncovs = np.array([navg_cov] * GMM_COMPONENTS)
-    nweights = np.ones(GMM_COMPONENTS) / GMM_COMPONENTS
+        # Initiate means, covariances, and weights for GMM
+        means = targets[randint(0, len(targets), GMM_COMPONENTS)]
+        avg_cov = np.cov(targets.T, bias=True)
+        covs = np.array([avg_cov] * GMM_COMPONENTS)
+        weights = np.ones(GMM_COMPONENTS) / GMM_COMPONENTS
 
-    for i in range(ITERATIONS):
-        weights, means, covs, tll = train_gmm(targets, weights, means, covs)
-        nweights, nmeans, ncovs, tll2 = train_gmm(non_targets, nweights, nmeans, ncovs)
-        print(
-            f"Total log likelihood for target class: {tll}; for non-target class: {tll2}"
+        nmeans = non_targets[randint(0, len(non_targets), GMM_COMPONENTS)]
+        navg_cov = np.cov(non_targets.T, bias=True)
+        ncovs = np.array([navg_cov] * GMM_COMPONENTS)
+        nweights = np.ones(GMM_COMPONENTS) / GMM_COMPONENTS
+
+        for i in range(ITERATIONS):
+            weights, means, covs, tll = train_gmm(targets, weights, means, covs)
+            nweights, nmeans, ncovs, tll2 = train_gmm(
+                non_targets, nweights, nmeans, ncovs
+            )
+            print(
+                f"Total log likelihood for target class: {tll}; for non-target class: {tll2}"
+            )
+
+        np.savez(
+            args.model_filename,
+            weights=weights,
+            means=means,
+            covs=covs,
+            nweights=nweights,
+            nmeans=nmeans,
+            ncovs=ncovs,
         )
 
-    # Evaluation
-    recordings = load_recordings("data/target_dev")
-    evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
-    recordings = load_recordings("data/non_target_dev")
-    evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
+    elif args.subcommand == "eval":
+        # Load model
+        model = np.load(args.model_filename)
+        weights = model["weights"]
+        means = model["means"]
+        covs = model["covs"]
+        nweights = model["nweights"]
+        nmeans = model["nmeans"]
+        ncovs = model["ncovs"]
+
+        # Evaluation
+        recordings = load_recordings("data/target_dev")
+        evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
+        recordings = load_recordings("data/non_target_dev")
+        evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
+    else:
+        raise ValueError("Invalid subcommand")
