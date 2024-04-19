@@ -1,3 +1,5 @@
+jupyter
 librosa
 numpy
-jupyter
+scipy
+setuptools
