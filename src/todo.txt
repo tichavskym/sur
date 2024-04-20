@@ -1,0 +1,4 @@
+TODO
+- cross-validation
+- early stopping
+- scheduler
