@@ -30,6 +30,16 @@ python audio/gmm.py train gmm_model.npz
 python audio/gmm.py eval gmm_model.npz
 ```
 
+To train and evaluate the ResNet18 model for the person recognition, run the following commands:
+
+```sh
+# Train the model
+python src/images_resnet/train_resnet.py --dataset /path/to/the/dataset/dir/
+
+# Evaluate the model
+python src/images_resnet/eval_resnet.py --model /path/to/models/model_checkpoint.pt --dataset /path/to/the/dataset/dir/
+```
+
 ## Audio training evaluation
 
 Evaluation of the GMM models during training was performed using `audio/peekin.py` and `plotting.py` helper scripts.
