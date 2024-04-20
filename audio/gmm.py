@@ -15,6 +15,10 @@ GMM_COMPONENTS = 16
 ITERATIONS = 30
 
 
+def logistic_sigmoid(x: np.ndarray) -> np.ndarray:
+    return 1.0 / (1.0 + np.exp(-x))
+
+
 def augment_data(waveforms: list[tuple[str, np.ndarray]]) -> list[(str, np.ndarray)]:
     """
     Augment data.
@@ -113,13 +117,14 @@ def evaluate(
     :param p_nt: prior probability of non-target class
     """
     for segment_name, features in recordings:
-        posterior_t = sum(logpdf_gmm(features.T, weights, means, covs)) + np.log(p_t)
-        posterior_nt = sum(logpdf_gmm(features.T, nweights, nmeans, ncovs)) + np.log(
+        posterior_t = logpdf_gmm(features.T, weights, means, covs) + np.log(p_t)
+        posterior_nt = logpdf_gmm(features.T, nweights, nmeans, ncovs) + np.log(
             p_nt
         )
 
-        score = posterior_t - posterior_nt
-        decision = 1 if (score > 0) else 0
+        score = sum(logistic_sigmoid(posterior_t - posterior_nt)) / features.shape[1]
+        decision = 1 if (score > 0.5) else 0
+
         print(f"{segment_name} {score} {decision}")
 
 
