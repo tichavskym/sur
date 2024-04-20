@@ -5,7 +5,6 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 import os
 from PIL import Image
-from sklearn.model_selection import KFold
 
 import random
 
@@ -95,6 +94,36 @@ class PersonDetectionDatasetValidation(Dataset):
         
         return image, label
 
+class EarlyStopping:
+    def __init__(self, patience=5, delta=0, verbose=False, path='checkpoint.pt'):
+        self.patience = patience  # Number of epochs to wait before stopping
+        self.delta = delta  # Minimum change in monitored quantity to qualify as improvement
+        self.verbose = verbose  # Whether to print updates
+        self.path = path  # Path to save the best model state
+        self.counter = 0  # Counter for consecutive epochs without improvement
+        self.best_score = None  # Best validation score
+        self.early_stop = False  # Flag to indicate whether to stop training
+
+    def __call__(self, val_loss, model):
+        if self.best_score is None:
+            self.best_score = val_loss
+            self.save_checkpoint(val_loss, model)
+        elif val_loss > self.best_score + self.delta:
+            self.counter += 1
+            if self.verbose:
+                print(f'Early Stopping counter: {self.counter} out of {self.patience}')
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = val_loss
+            self.save_checkpoint(val_loss, model)
+            self.counter = 0
+
+    def save_checkpoint(self, val_loss, model):
+        if self.verbose:
+            print(f'Validation loss decreased ({self.best_score:.6f} --> {val_loss:.6f}).  Saving model ...')
+        torch.save(model.state_dict(), self.path)
+
 
 # ResNet18 model
 class ResNet18(nn.Module):
@@ -126,6 +155,8 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     criterion = nn.BCEWithLogitsLoss()  # Binary cross-entropy loss
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
+    early_stopping = EarlyStopping(patience=5, verbose=True, path='model_checkpoint.pt')
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
 
@@ -149,10 +180,12 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
         model.eval()
         correct = 0
         total = 0
+        val_loss = 0.0
         with torch.no_grad():
             for images, labels in val_loader:
                 images, labels = images.to(device), labels.float().unsqueeze(1).to(device)
                 outputs = model(images)
+                val_loss += criterion(outputs, labels).item()
                 predicted = torch.round(torch.sigmoid(outputs))
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -160,10 +193,21 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
         accuracy = correct / total
         print(f'Validation Accuracy: {accuracy:.4f}')
 
+        val_loss /= len(val_loader)
+        early_stopping(val_loss, model)
+
+        if early_stopping.early_stop:
+            print("Early stopping")
+            break
+
     # Create custom dataset for validation
     val_dataset = PersonDetectionDatasetValidation(data_dir)
     # Create DataLoader for validation
     val_loader_complete = DataLoader(val_dataset, batch_size=32, shuffle=False)
+
+    model = ResNet18()
+    model.load_state_dict(torch.load('/home/david/Documents/CodingFiles/GitWorkspace/sur/model_checkpoint.pt'))
+    model.eval()
 
     # Evaluation on validation set
     model.eval()
@@ -179,11 +223,6 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
 
     accuracy = correct / total
     print(f'Test Accuracy: {accuracy:.4f}')
-
-    # Save the model
-    if model is not None:
-        torch.save(model.state_dict(), 'person_detector_resnet18_cross.pth')
-        print('Model saved.')
 
 if __name__ == '__main__':
     data_dir = '/home/david/Documents/CodingFiles/GitWorkspace/sur/data/SUR_projekt2023-2024'    
