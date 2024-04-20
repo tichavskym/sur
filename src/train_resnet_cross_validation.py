@@ -1,3 +1,4 @@
+import argparse
 import os
 import random
 import torch
@@ -7,6 +8,14 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 
+
+CHECKPOINT_FILE_NAME = 'model_checkpoint.pt'
+
+# The function for parsing the user arguments.
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Train the ResNet-18 model')    
+    parser.add_argument('--dataset', type=str, required=True, help='Path to the directory containing the complete dataset')
+    return parser.parse_args()
 
 # On-the-fly Augmentation class.
 #
@@ -168,7 +177,7 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     # For the optimizer, the L2 regularization is used.
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
-    early_stopping = EarlyStopping(patience=5, verbose=True, path='model_checkpoint.pt')
+    early_stopping = EarlyStopping(patience=5, verbose=True, path=CHECKPOINT_FILE_NAME)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -219,8 +228,11 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     test_dataset = TestingDataset(data_dir)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
+    current_directory = os.getcwd()
+    model_path = current_directory + CHECKPOINT_FILE_NAME
+
     model = ResNet18()
-    model.load_state_dict(torch.load('/home/david/Documents/CodingFiles/GitWorkspace/sur/model_checkpoint.pt'))
+    model.load_state_dict(torch.load(model_path))
     model.eval()
 
     # Evaluation on testing dataset.
@@ -239,5 +251,7 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     print(f'Test Accuracy: {accuracy:.4f}')
 
 if __name__ == '__main__':
-    data_dir = '/home/david/Documents/CodingFiles/GitWorkspace/sur/data/SUR_projekt2023-2024'    
+    args = parse_arguments()
+    data_dir = args.dataset
+
     train_and_save_model(data_dir)
