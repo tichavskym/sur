@@ -11,8 +11,8 @@ from numpy.random import randint
 from audiomentations import ApplyImpulseResponse, AddBackgroundNoise, PolarityInversion
 
 SAMPLE_RATE = 16000
-GMM_COMPONENTS = 16
-ITERATIONS = 30
+GMM_COMPONENTS = 24
+ITERATIONS = 27
 
 
 def logistic_sigmoid(x: np.ndarray) -> np.ndarray:
@@ -118,9 +118,7 @@ def evaluate(
     """
     for segment_name, features in recordings:
         posterior_t = logpdf_gmm(features.T, weights, means, covs) + np.log(p_t)
-        posterior_nt = logpdf_gmm(features.T, nweights, nmeans, ncovs) + np.log(
-            p_nt
-        )
+        posterior_nt = logpdf_gmm(features.T, nweights, nmeans, ncovs) + np.log(p_nt)
 
         score = sum(logistic_sigmoid(posterior_t - posterior_nt)) / features.shape[1]
         decision = 1 if (score > 0.5) else 0
@@ -136,6 +134,22 @@ def parse_arguments():
     evaluate = subparsers.add_parser("eval")
     evaluate.add_argument("model_filename")
     return parser.parse_args()
+
+
+def evaluate_model(model_filename: str, target_dir: str, non_target_dir: str):
+    model = np.load(model_filename)
+    weights = model["weights"]
+    means = model["means"]
+    covs = model["covs"]
+    nweights = model["nweights"]
+    nmeans = model["nmeans"]
+    ncovs = model["ncovs"]
+
+    # Evaluation
+    recordings = load_recordings(target_dir)
+    evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
+    recordings = load_recordings(non_target_dir)
+    evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
 
 
 if __name__ == "__main__":
@@ -183,19 +197,6 @@ if __name__ == "__main__":
         )
 
     elif args.subcommand == "eval":
-        # Load model
-        model = np.load(args.model_filename)
-        weights = model["weights"]
-        means = model["means"]
-        covs = model["covs"]
-        nweights = model["nweights"]
-        nmeans = model["nmeans"]
-        ncovs = model["ncovs"]
-
-        # Evaluation
-        recordings = load_recordings("data/target_dev")
-        evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
-        recordings = load_recordings("data/non_target_dev")
-        evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
+        evaluate_model(args.model_filename, "data/target_dev", "data/non_target_dev")
     else:
         raise ValueError("Invalid subcommand")
