@@ -1,3 +1,0 @@
-TODO
-- presunout data do: src/images/
-- audio presunout do src/audio/
