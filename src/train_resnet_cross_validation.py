@@ -9,6 +9,7 @@ from sklearn.model_selection import KFold
 
 import random
 
+# On-the-fly Augmentation
 class RandomAugmentation:
     def __init__(self):
         self.transforms = [
@@ -25,6 +26,7 @@ class RandomAugmentation:
         ]
 
     def __call__(self, img):
+        # TODO zkusit vahu 0.6
         if random.random() < 0.8:
             transform = random.choice(self.transforms)
             img = transform(img)
@@ -105,12 +107,8 @@ class ResNet18(nn.Module):
     def forward(self, x):
         return self.resnet(x)
 
-def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0.001, num_folds=5):
-    kf = KFold(n_splits=num_folds, shuffle=True, random_state=42)
-
-    best_accuracy = 0.0
-    best_model_state_dict = None
-
+# TODO zkusit batch size 16
+def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0.0001, num_folds=5):
     transform = transforms.Compose([        
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
@@ -121,39 +119,31 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     # Create custom dataset
     dataset = PersonDetectionDataset(data_dir, transform=transform)
 
-    fold_idx = 0
-    for train_idx, val_idx in kf.split(dataset):
-        fold_idx += 1
-        print(f'Fold {fold_idx}')
+    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-        # Create DataLoader for training and validation sets
-        train_subset = torch.utils.data.Subset(dataset, train_idx)
-        val_subset = torch.utils.data.Subset(dataset, val_idx)
-        train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False)
+    model = ResNet18()
+    criterion = nn.BCEWithLogitsLoss()  # Binary cross-entropy loss
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
-        model = ResNet18()
-        criterion = nn.BCEWithLogitsLoss()  # Binary cross-entropy loss
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
 
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model.to(device)
+    # Training loop
+    for epoch in range(num_epochs):
+        model.train()
+        running_loss = 0.0
+        for images, labels in train_loader:
+            images, labels = images.to(device), labels.float().unsqueeze(1).to(device)
+            optimizer.zero_grad()
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * images.size(0)
 
-        # Training loop
-        for epoch in range(num_epochs):
-            model.train()
-            running_loss = 0.0
-            for images, labels in train_loader:
-                images, labels = images.to(device), labels.float().unsqueeze(1).to(device)
-                optimizer.zero_grad()
-                outputs = model(images)
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
-                running_loss += loss.item() * images.size(0)
-
-            epoch_loss = running_loss / len(train_subset)
-            print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+        epoch_loss = running_loss / len(dataset)
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
 
         # Evaluation on validation set
         model.eval()
@@ -169,10 +159,6 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
 
         accuracy = correct / total
         print(f'Validation Accuracy: {accuracy:.4f}')
-
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
-            best_model_state_dict = model.state_dict()
 
     # Create custom dataset for validation
     val_dataset = PersonDetectionDatasetValidation(data_dir)
@@ -194,10 +180,10 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     accuracy = correct / total
     print(f'Test Accuracy: {accuracy:.4f}')
 
-    # Save the best model
-    if best_model_state_dict is not None:
-        torch.save(best_model_state_dict, 'person_detector_resnet18_cross.pth')
-        print('Best model saved.')
+    # Save the model
+    if model is not None:
+        torch.save(model.state_dict(), 'person_detector_resnet18_cross.pth')
+        print('Model saved.')
 
 if __name__ == '__main__':
     data_dir = '/home/david/Documents/CodingFiles/GitWorkspace/sur/data/SUR_projekt2023-2024'    
