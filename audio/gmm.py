@@ -12,36 +12,17 @@ from audiomentations import ApplyImpulseResponse, AddBackgroundNoise, PolarityIn
 
 SAMPLE_RATE = 16000
 GMM_COMPONENTS = 16
-ITERATIONS = 25
+ITERATIONS = 30
 
 
-def augment_data(name: str, waveform: np.ndarray) -> list[(str, np.ndarray)]:
+def augment_data(waveforms: list[tuple[str, np.ndarray]]) -> list[(str, np.ndarray)]:
     """
     Augment data.
     """
     augmented = []
-
-    # Keep the original recording
-    augmented.append((name, waveform))
-
-    # Augment adding Gaussian noise
-    augmented.append(
-        (f"{name}_gaussian_noise", waveform + np.random.normal(0, 0.1, waveform.shape))
-    )
-
-    # Augment using the time stretching (change of speed)
-    rnd_speed = np.random.uniform(0.7, 1.3)
-    augmented.append(
-        (f"{name}_speed", librosa.effects.time_stretch(y=waveform, rate=rnd_speed))
-    )
-
-    # Augment adding Room Impulse Response
     rir_augment = ApplyImpulseResponse(
         ir_path="RIRS_NOISES/real_rirs_isotropic_noises", p=1.0
     )
-    augmented.append((f"{name}_rir", rir_augment(waveform, sample_rate=SAMPLE_RATE)))
-
-    # Augment adding background noise
     background_noise = AddBackgroundNoise(
         sounds_path="RIRS_NOISES/pointsource_noises",
         min_snr_in_db=3.0,
@@ -49,12 +30,37 @@ def augment_data(name: str, waveform: np.ndarray) -> list[(str, np.ndarray)]:
         noise_transform=PolarityInversion(p=0.5),
         p=1.0,
     )
-    augmented.append(
-        (
-            f"{name}_background_noise",
-            background_noise(waveform, sample_rate=SAMPLE_RATE),
+
+    for name, waveform in waveforms:
+        # Keep the original recording
+        augmented.append((name, waveform))
+
+        # Augment adding Gaussian noise
+        augmented.append(
+            (
+                f"{name}_gaussian_noise",
+                waveform + np.random.normal(0, 0.1, waveform.shape),
+            )
         )
-    )
+
+        # Augment using the time stretching (change of speed)
+        rnd_speed = np.random.uniform(0.7, 1.3)
+        augmented.append(
+            (f"{name}_speed", librosa.effects.time_stretch(y=waveform, rate=rnd_speed))
+        )
+
+        # Augment adding Room Impulse Response
+        augmented.append(
+            (f"{name}_rir", rir_augment(waveform, sample_rate=SAMPLE_RATE))
+        )
+
+        # Augment adding background noise
+        augmented.append(
+            (
+                f"{name}_background_noise",
+                background_noise(waveform, sample_rate=SAMPLE_RATE),
+            )
+        )
 
     return augmented
 
@@ -76,11 +82,8 @@ def load_recordings(
 
         waveforms.append((segment_name, waveform[int(initial_pause * sr) :]))
 
-    augmented = []
     if augmentation:
-        for segment_name, waveform in waveforms:
-            augmented.extend(augment_data(segment_name, waveform))
-        waveforms = augmented
+        waveforms = augment_data(waveforms)
 
     mfccs = []
     for s, w in waveforms:
@@ -100,6 +103,15 @@ def evaluate(
     p_t=0.5,
     p_nt=0.5,
 ):
+    """
+    Evaluate the model on the given recordings and print results into stdout.
+
+    :param recordings: tuple containing recording name and MFCC features
+    :param weights, means, covs: parameters of the GMM model for target class
+    :param nweights, nmeans, ncovs: parameters of the GMM model for non-target class
+    :param p_t: prior probability of target class
+    :param p_nt: prior probability of non-target class
+    """
     for segment_name, features in recordings:
         posterior_t = sum(logpdf_gmm(features.T, weights, means, covs)) + np.log(p_t)
         posterior_nt = sum(logpdf_gmm(features.T, nweights, nmeans, ncovs)) + np.log(
