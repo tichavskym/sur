@@ -1,14 +1,18 @@
+import os
+import random
 import torch
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-import os
 from PIL import Image
 
-import random
 
-# On-the-fly Augmentation
+# On-the-fly Augmentation class.
+#
+# The class provides a list of possible augmentation transformations. The 
+# transformation is applied with probability 0.8. With that, the chosen 
+# transformation is randomly selected too.
 class RandomAugmentation:
     def __init__(self):
         self.transforms = [
@@ -25,23 +29,31 @@ class RandomAugmentation:
         ]
 
     def __call__(self, img):
-        # TODO zkusit vahu 0.6
+        # Apply the randomly selected transformation on the original image with
+        # the selected probability.
         if random.random() < 0.8:
             transform = random.choice(self.transforms)
             img = transform(img)
 
         return img
 
-class PersonDetectionDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
+# The class for providing the dataset for the training part and validation part during the training.
+class TrainingValidationDataset(Dataset):
+    def __init__(self, root_dir):
         self.root_dir = root_dir
         self.non_target_dir = os.path.join(root_dir, 'non_target_train')
         self.target_dir = os.path.join(root_dir, 'target_train')
+        self.non_target_images = [os.path.join(self.non_target_dir, f) for f in os.listdir(self.non_target_dir) if f.endswith('.png')]
+        self.target_images = [os.path.join(self.target_dir, f) for f in os.listdir(self.target_dir) if f.endswith('.png')]
 
-        self.non_target_images = [os.path.join(self.non_target_dir, f) for f in os.listdir(self.non_target_dir) if f.endswith('.jpg') or f.endswith('.png')]
-        self.target_images = [os.path.join(self.target_dir, f) for f in os.listdir(self.target_dir) if f.endswith('.jpg') or f.endswith('.png')]
-
-        self.transform = transform
+        # The normalization values are taken from the following source:
+        # Source: https://pytorch.org/vision/0.15/transforms.html#transforms-scriptability
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            RandomAugmentation(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
     def __len__(self):
         return len(self.non_target_images) + len(self.target_images)
@@ -60,17 +72,18 @@ class PersonDetectionDataset(Dataset):
 
         return image, label
 
-class PersonDetectionDatasetValidation(Dataset):
-    def __init__(self, root_dir):
+# The class for providing the dataset for the testing part.
+class TestingDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
         self.root_dir = root_dir
         self.non_target_dir = os.path.join(root_dir, 'non_target_dev')
         self.target_dir = os.path.join(root_dir, 'target_dev')
+        self.non_target_images = [f for f in os.listdir(self.non_target_dir) if f.endswith('.png')]        
+        self.target_images = [f for f in os.listdir(self.target_dir) if f.endswith('.png')]
 
-        self.non_target_images = [f for f in os.listdir(self.non_target_dir) if f.endswith('.jpg') or f.endswith('.png')]
-        
-        self.target_images = [f for f in os.listdir(self.target_dir) if f.endswith('.jpg') or f.endswith('.png')]
-
-        self.transform = transforms.Compose([            
+        # The normalization values are taken from the following source:
+        # Source: https://pytorch.org/vision/0.15/transforms.html#transforms-scriptability
+        self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -94,15 +107,18 @@ class PersonDetectionDatasetValidation(Dataset):
         
         return image, label
 
+# The EarlyStopping class implementation is based on the code from the following source:
+# Source: https://github.com/Bjarten/early-stopping-pytorch/blob/f1a4cad7ebe762c1e3ca9e74c0845a555616952b/pytorchtools.py
+# Author: Bjarte Mehus Sunde  (https://github.com/Bjarten)
 class EarlyStopping:
     def __init__(self, patience=5, delta=0, verbose=False, path='checkpoint.pt'):
-        self.patience = patience  # Number of epochs to wait before stopping
-        self.delta = delta  # Minimum change in monitored quantity to qualify as improvement
-        self.verbose = verbose  # Whether to print updates
-        self.path = path  # Path to save the best model state
-        self.counter = 0  # Counter for consecutive epochs without improvement
-        self.best_score = None  # Best validation score
-        self.early_stop = False  # Flag to indicate whether to stop training
+        self.patience = patience  # How long to wait after last time validation loss improved.
+        self.delta = delta  # Minimum change in monitored quantity to qualify as an improvement.        
+        self.path = path  #  Path for the checkpoint to be saved to.
+        self.counter = 0  # Counter for consecutive epochs without improvement.
+        self.best_score = None  # Best validation score.
+        self.early_stop = False  # Flag to indicate whether to stop training.
+        self.verbose = verbose
 
     def __call__(self, val_loss, model):
         if self.best_score is None:
@@ -125,34 +141,31 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.path)
 
 
-# ResNet18 model
+# ResNet18 model definition.
 class ResNet18(nn.Module):
     def __init__(self):
         super(ResNet18, self).__init__()
-        self.resnet = models.resnet18(pretrained=False)
+        # The weights parameter is by default none, so the non-pre-trained 
+        # model is used (only the model architecture).
+        self.resnet = models.resnet18()
         num_ftrs = self.resnet.fc.in_features
         self.resnet.fc = nn.Linear(num_ftrs, 1)
 
     def forward(self, x):
         return self.resnet(x)
 
-# TODO zkusit batch size 16
-def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0.0001, num_folds=5):
-    transform = transforms.Compose([        
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        RandomAugmentation(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-
-    # Create custom dataset
-    dataset = PersonDetectionDataset(data_dir, transform=transform)
+# Function for training the model, evaluation and final testing.
+def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0.0001, num_folds=5):    
+    # Create custom training and validation dataset.
+    dataset = TrainingValidationDataset(data_dir)
 
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     model = ResNet18()
-    criterion = nn.BCEWithLogitsLoss()  # Binary cross-entropy loss
+    # Binary cross-entropy loss.
+    criterion = nn.BCEWithLogitsLoss()
+    # For the optimizer, the L2 regularization is used.
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     early_stopping = EarlyStopping(patience=5, verbose=True, path='model_checkpoint.pt')
@@ -160,7 +173,9 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
 
-    # Training loop
+    #################
+    # Training loop #
+    #################
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -176,7 +191,7 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
         epoch_loss = running_loss / len(dataset)
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
 
-        # Evaluation on validation set
+        # Evaluation on validation set.
         model.eval()
         correct = 0
         total = 0
@@ -200,21 +215,20 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
             print("Early stopping")
             break
 
-    # Create custom dataset for validation
-    val_dataset = PersonDetectionDatasetValidation(data_dir)
-    # Create DataLoader for validation
-    val_loader_complete = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    # Create custom dataset for testing.
+    test_dataset = TestingDataset(data_dir)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     model = ResNet18()
     model.load_state_dict(torch.load('/home/david/Documents/CodingFiles/GitWorkspace/sur/model_checkpoint.pt'))
     model.eval()
 
-    # Evaluation on validation set
+    # Evaluation on testing dataset.
     model.eval()
     correct = 0
     total = 0
     with torch.no_grad():
-        for images, labels in val_loader_complete:
+        for images, labels in test_loader:
             images, labels = images.to(device), labels.float().unsqueeze(1).to(device)
             outputs = model(images)
             predicted = torch.round(torch.sigmoid(outputs))
