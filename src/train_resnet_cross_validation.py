@@ -229,7 +229,7 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     current_directory = os.getcwd()
-    model_path = current_directory + CHECKPOINT_FILE_NAME
+    model_path = current_directory + '/' + CHECKPOINT_FILE_NAME
 
     model = ResNet18()
     model.load_state_dict(torch.load(model_path))
