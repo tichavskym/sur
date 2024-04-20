@@ -1,6 +1,7 @@
 audiomentations
 jupyter
 librosa
+matplotlib
 numpy
 scipy
 setuptools
