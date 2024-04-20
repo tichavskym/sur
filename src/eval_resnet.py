@@ -3,6 +3,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from PIL import Image
+from pathlib import Path
 import os
 import argparse
 
@@ -28,7 +29,7 @@ class ResNet18(nn.Module):
         super(ResNet18, self).__init__()
         self.resnet = torch.hub.load('pytorch/vision:v0.9.0', 'resnet18', pretrained=False)
         num_ftrs = self.resnet.fc.in_features
-        self.resnet.fc = nn.Linear(num_ftrs, 1)  # Output 1 value (person or no person)
+        self.resnet.fc = nn.Linear(num_ftrs, 1)
 
     def forward(self, x):
         return self.resnet(x)
@@ -38,6 +39,10 @@ def parse_arguments():
     parser.add_argument('--model', type=str, required=True, help='Path to the trained model file')
     parser.add_argument('--dataset', type=str, required=True, help='Path to the directory containing test images')
     return parser.parse_args()
+
+def extract_filename_without_extension(file_path):
+    path = Path(file_path)
+    return path.stem
 
 def evaluate_model(model_path, dataset_path):
     # Load the trained model
@@ -66,13 +71,13 @@ def evaluate_model(model_path, dataset_path):
             outputs = model(images)
             probabilities = torch.sigmoid(outputs)
             probability = probabilities.item()
-            print(probability)
             predicted_label = '1' if probability > 0.5 else '0'
-            predictions.append((paths[0], predicted_label))
+            predictions.append((paths[0], probability, predicted_label))
 
     # Print predictions
-    for img_path, label in predictions:
-        print(f'Image: {img_path}, Prediction: {label}')
+    for img_path, probability, label in predictions:
+        img_name = extract_filename_without_extension(img_path)
+        print(f'{img_name} {probability} {label}')
 
 if __name__ == '__main__':
     # Parse command-line arguments
