@@ -37,3 +37,5 @@ See following figure for performance of the GMM models on test and validation da
 components and iterations used.
 
 ![GMM performance](doc/gmm_errors.png)
+
+The model we selected for further use is located at `models/gmm_audio_24_27.npz` (24 components, 27 iterations).
