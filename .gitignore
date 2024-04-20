@@ -1,5 +1,6 @@
 # Dataset
 data/*
+evaluation_dataset/*
 
 # Augmnentation database
 RIRS_NOISES/*
