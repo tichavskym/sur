@@ -1,5 +1,4 @@
 TODO
-- cross-validation
-- early stopping
-- scheduler
-- vyzkouset batch_size=18 a lr=10^(-4)
+- TODO aktualizovat requirements, jestli je potreba
+- presunout data do: src/images/
+- audio presunout do src/audio/
