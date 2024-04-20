@@ -29,3 +29,11 @@ python audio/gmm.py train gmm_model.npz
 # or maliciously constructed data (uses pickle.load under the hood)
 python audio/gmm.py eval gmm_model.npz
 ```
+
+## Audio training evaluation
+
+Evaluation of the GMM models during training was performed using `audio/peekin.py` and `plotting.py` helper scripts.
+See following figure for performance of the GMM models on test and validation datasets with respect to the number of 
+components and iterations used.
+
+![GMM performance](doc/gmm_errors.png)
