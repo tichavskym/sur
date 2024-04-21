@@ -89,8 +89,8 @@ def train(gt_data, gmm_data, resnet_data):
 if __name__ == "__main__":
     args = parse_arguments()
 
-    # The files contain the evaluation at the non-target data as first 
-    # (non-target-dev). As second the target data (target-dev).
+    # The files contain the evaluation at the target data as first 
+    # (target-dev). As second the non-target data (non-target-dev).
     gt_data = load_data_ground_truth(args.gt)    
     gmm_data = load_data_models(args.gmm)
     resnet_data = load_data_models(args.resnet)
