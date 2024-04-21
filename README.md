@@ -50,6 +50,24 @@ python images_resnet/eval_resnet.py --model /path/to/models/model_checkpoint.pt 
 python3 images_resnet/plotting.py
 ```
 
+To train the combined model weights (probability or prediction version) and evaluate the combined model using the GMM and ResNet18 evaluations, run the following commands:
+```sh
+# Train the weights using the prediction version.
+python utils/train_models_weights_pred.py --gt /path/to/groundtruth/file --gmm \
+  /path/to/gmm/evaluations/file --resnet \
+  /path/to/resnet/evaluations/file
+
+# Train the weights using the probability version.
+python utils/train_models_weights_pred.py --gt /path/to/groundtruth/file --gmm \
+  /path/to/gmm/evaluations/file --resnet \
+  /path/to/resnet/evaluations/file
+
+# Evaluate the combined model using the weights (for example 0.6 for GMM and 0.4 for ResNet18).
+python3 utils/eval_combined_model.py --gmm \
+  /path/to/gmm/evaluations/file --resnet \
+  /path/to/resnet/evaluations/file --gmm_weight 0.6 --resnet_weight 0.4
+```
+
 To generate the final report, install `pandoc` and `latex` and execute
 
 ```shell
@@ -80,7 +98,7 @@ okay with initializing both mixtures with more components than 10 (to simplify d
 For our runs, clearly the most performant and the best converging models are those with 24 components. The model 
 we selected for further use is located at `models/gmm_audio_24_27.npz` (24 components, 27 iterations).
 
-## Image training evaluation
+## Image training model
 
 See the following figure for the performance of the ResNet18 model (train and validation loss and validation accuracy).
 
@@ -88,3 +106,34 @@ See the following figure for the performance of the ResNet18 model (train and va
 
 The model we selected for further use is located at `models/resnet_image_15_20.pt` (saved at 15 epochs of 20 epochs
 totally) chosen using the Early Stopping approach.
+
+| Model | Epochs | Learning Rate | Batch Size | Random Augmentation | Augmentation Probability| K-Folds | Early Stopping (Epochs saved) | Scheduler (Step Size, Gamma) | Validation Accuracy |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ResNet18 | 20 | 0.001 | 32 | &cross; | 0.0 | &check; | &cross; | &cross; | 0.9 |
+| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &cross; | &cross; | &cross; | 0.9143 |
+| ResNet18 | 20 | 0.001 | 32 | &check; | 0.8 | &check; | &cross; | &cross; | 0.8714 |
+| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &check; | &cross; | &cross; | 0.8714 |
+| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.6 | &cross; | &cross; | &cross; | 0.9286 |
+| ResNet18 | 20 | 0.0001 | 16 | &check; | 0.8 | &cross; | &cross; | &cross; | 0.8571 |
+| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (15/20) | &cross; | 0.9857 |
+| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.6 | &cross; | &check; (17/20) | &cross; | 0.8857 |
+| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (16/20) | &check; (5, 0.1) | 0.9000 |
+| ResNet18 | 20 | 0.001 | 32 | &check; | 0.8 | &cross; | &check; (14/20) | &check; (5, 0.5) | 0.8143 |
+| ResNet18 | 10 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (10/10) | &cross; | 0.8714 |
+| ResNet18 | 30 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (24/30) | &cross; | 0.8714 |
+
+- *Random Augmentation* denotes dynamic On-the-Fly Augmentation.
+- *K-Folds* denotes the cross-validation.
+
+## Results
+The project documentation is located in ```doc/dokumentace.pdf```.
+
+The results evaluations containing the five systems are located in ```results/``` folder. The files contain the following systems:
+
+| System                     | Description |
+| ---                        | ---         |
+| gmm_audio_24_27.txt        | The system which uses only the GMM audio model.      |
+| resnet_image_15_20.txt     | The system which uses only the ResNet18 image model. |
+| gmm_resnet_0_5.txt         | The system uses both models. The weight for both model's probabilities is 0.5. |
+| gmm_resnet_0_66_gmm.txt    | The system uses both models. GMM probability weight: 0.6618765075622808, ResNet18 probability weight: 0.3381234924377192. |
+| gmm_resnet_0_66_resnet.txt | The system uses both models. ResNet18 probability weight: 0.6618765075622808, GMM probability weight: 0.3381234924377192. |
