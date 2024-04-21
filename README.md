@@ -4,6 +4,8 @@ People identification based on voice recordings and headshot images.
 
 *Featuring:* Gaussian Mixture Model (GMM) & ResNet-18.
 
+*Authors*: David Chocholatý (xchoch09), Milan Tichavský (xticha09)
+
 ## Development setup
 
 To install the required dependencies, run the following command:
