@@ -3,6 +3,8 @@ jupyter
 librosa
 matplotlib
 numpy
+torch
+torchvision
 scipy
 setuptools
 ruff
