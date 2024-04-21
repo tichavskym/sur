@@ -16,19 +16,19 @@ ax1.set_ylabel('Loss')
 ax1.plot(train_losses, label='Training Loss', linestyle='dotted', color='mediumblue')
 ax1.plot(val_losses, label='Validation Loss', linestyle='dotted', color=color)
 ax1.tick_params(axis='y')
-ax1.legend(loc='upper left')
 
 # Create a twin axis sharing the same x-axis.
 ax2 = ax1.twinx()
-
 ax2.set_ylabel('Accuracy')
 ax2.plot(val_accuracies, label='Validation Accuracy', color='firebrick')
 ax2.tick_params(axis='y')
-ax2.legend(loc='upper right')
+
+# Combine legends for ax1 and ax2 into a single legend in upper left corner
+handles1, labels1 = ax1.get_legend_handles_labels()
+handles2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(handles1 + handles2, labels1 + labels2, loc='upper left')
 
 ax1.set_title('ResNet18 Training and Validation Loss with Validation Accuracy')
-ax1.set_xlabel('Epoch')
-ax1.set_ylabel('Loss')
 ax2.set_ylabel('Accuracy')
 
 # Set the x-axis to display only integer values.
