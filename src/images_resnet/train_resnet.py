@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import os
 import random
 import torch
@@ -182,6 +183,10 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
 
+    train_losses = []
+    val_losses = []
+    val_accuracies = []
+
     #################
     # Training loop #
     #################
@@ -198,6 +203,7 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
             running_loss += loss.item() * images.size(0)
 
         epoch_loss = running_loss / len(dataset)
+        train_losses.append(epoch_loss)
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
 
         # Evaluation on validation set.
@@ -217,12 +223,24 @@ def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0
         accuracy = correct / total
         print(f'Validation Accuracy: {accuracy:.4f}')
 
-        val_loss /= len(val_loader)
+        val_loss = val_loss / len(val_loader)
         early_stopping(val_loss, model)
+
+        val_losses.append(val_loss)
+        val_accuracies.append(accuracy)
 
         if early_stopping.early_stop:
             print("Early stopping")
             break
+
+    statistics = {
+        'train_losses': train_losses,
+        'val_losses': val_losses,
+        'val_accuracies': val_accuracies
+    }
+
+    np.save('training_statistics.npy', statistics)
+    print('Training statistics saved.')
 
     # Create custom dataset for testing.
     test_dataset = TestingDataset(data_dir)
