@@ -20,7 +20,7 @@ def parse_arguments():
 class TestingDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
-        self.images = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.jpg') or f.endswith('.png')]
+        self.images = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.png')]
         
         # The normalization values are taken from the following source:
         # Source: https://pytorch.org/vision/0.15/transforms.html#transforms-scriptability
@@ -73,7 +73,7 @@ def evaluate_model(model_path, dataset_path):
     predictions = []
 
     with torch.no_grad():
-        for images, paths in test_loader:
+        for images, paths in test_loader:            
             images = images.to(device)
             outputs = model(images)
             probabilities = torch.sigmoid(outputs)
@@ -81,8 +81,11 @@ def evaluate_model(model_path, dataset_path):
             predicted_label = '1' if probability > 0.5 else '0'
             predictions.append((paths[0], probability, predicted_label))
 
+    # Sort the list based on the first element of each tuple.
+    sorted_predictions = sorted(predictions, key=lambda x: x[0])
+
     # Print predictions.
-    for img_path, probability, label in predictions:
+    for img_path, probability, label in sorted_predictions:
         img_name = extract_filename_without_extension(img_path)
         print(f'{img_name} {probability} {label}')
 
