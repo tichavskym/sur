@@ -1,13 +1,14 @@
 import io
 from glob import glob
 
-from gmm import evaluate_model
+from gmm import classify
 from contextlib import redirect_stdout
 
 for file in glob("models/" + "gmm_24*.npz"):
     f = io.StringIO()
     with redirect_stdout(f):
-        evaluate_model(f"{file}", "data/target_dev", "data/non_target_dev")
+        classify(f"{file}", "data/target_dev")
+        classify(f"{file}", "data/non_target_dev")
     results = f.getvalue()
 
     i = 0
