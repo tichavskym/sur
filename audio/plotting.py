@@ -24,9 +24,12 @@ def load_training(filename):
 if __name__ == "__main__":
     scores_16 = load_scores("models/gmm_16.results")
     scores_24 = load_scores("models/gmm_24.results")
+    scores_32 = load_scores("models/gmm_32.results")
 
     training_16 = load_training("models/gmm_16.training")
     training_24 = load_training("models/gmm_24.training")
+    training_32 = load_training("models/gmm_32.training")
+
 
     x_axis = list(range(1, 100 + 1))
 
@@ -38,10 +41,13 @@ if __name__ == "__main__":
     ax1.plot(
         x_axis, scores_24, label="Validation error, 24 components", color="mediumblue"
     )
+    ax1.plot(
+        x_axis, scores_32, label="Validation error, 32 components", color="darkgreen"
+    )
     ax1.legend()
 
     ax2 = ax1.twinx()
-    ax2.set(ylabel="Training Set Error")
+    ax2.set(ylabel="Training Dataset Error")
     ax2.plot(
         x_axis,
         training_16,
@@ -56,8 +62,15 @@ if __name__ == "__main__":
         linestyle=":",
         color="mediumblue",
     )
+    ax2.plot(
+        x_axis,
+        training_32,
+        label="Training error, 32 components",
+        linestyle=":",
+        color="darkgreen",
+    )
 
-    ax1.set(xlabel="# of iterations", ylabel="Validation Set Error")
+    ax1.set(xlabel="# of iterations", ylabel="Validation Dataset Error")
     ax1.set_title("GMM errors with respect to the number of iterations & components")
 
     lines1, labels1 = ax1.get_legend_handles_labels()
