@@ -1,4 +1,4 @@
-# SUR
+# People identification (SUR class project)
 
 People identification based on voice recordings and headshot images.
 
@@ -41,13 +41,25 @@ To train and evaluate the ResNet18 model for the person recognition, run the fol
 python images_resnet/train_resnet.py --dataset /path/to/the/dataset/dir/
 
 # Use the model to classify data
-python images_resnet/eval_resnet.py --model /path/to/models/model_checkpoint.pt --dataset /path/to/the/dataset/dir/
+python images_resnet/eval_resnet.py --model /path/to/models/model_checkpoint.pt \
+  --dataset /path/to/the/dataset/dir/
 
 # Plot statistics
 python3 images_resnet/plotting.py
 ```
 
-## Audio model training & evaluation
+To generate the final report, install `pandoc` and `latex` and execute
+
+```shell
+pandoc README.md --metadata-file doc/pandoc-metadata.yml -s -o \
+  doc/dokumentace.pdf
+```
+
+## Audio model
+
+For audio, Gaussian Mixture Model (GMM) was used. The model was trained on the dataset provided by the course. 
+The data was augmented by changing speed, adding Gaussian noise, adding room impulse response, and adding different 
+background noises (using the Room Impulse Response and Noise database mentioned above).
 
 Evaluation of the GMM models during training was performed using `audio/peekin.py` and `audio/plotting.py` helper 
 scripts. During training, we were watching the sum of total log likelihoods for both target and non-target classes. 
@@ -72,4 +84,5 @@ See the following figure for the performance of the ResNet18 model (train and va
 
 ![ResNet18 performance](doc/resnet_stats.png)
 
-The model we selected for further use is located at `models/resnet_image_15_20.pt` (saved at 15 epochs of 20 epochs totally) chosen using the Early Stopping approach.
+The model we selected for further use is located at `models/resnet_image_15_20.pt` (saved at 15 epochs of 20 epochs
+totally) chosen using the Early Stopping approach.
