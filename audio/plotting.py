@@ -21,7 +21,54 @@ def load_training(filename):
     return errors
 
 
-if __name__ == "__main__":
+def plot_comparison_between_augmented_and_not():
+    scores_24 = load_scores("models/gmm_24.results")
+    scores_wo_24 = load_scores("models/gmm_wo_24.results")
+
+    training_24 = load_training("models/gmm_24.training")
+    training_wo_24 = load_training("models/gmm_wo_24.training")
+
+    x_axis = list(range(1, 100 + 1))
+
+    fig, ax1 = plt.subplots(figsize=(10, 8))
+
+    ax1.plot(
+        x_axis, scores_wo_24, label="Validation error, 24 components without augmentation", color="firebrick"
+    )
+    ax1.plot(
+        x_axis, scores_24, label="Validation error, 24 components", color="mediumblue"
+    )
+    ax1.legend()
+
+    ax2 = ax1.twinx()
+    ax2.set(ylabel="Training Dataset Error")
+    ax2.plot(
+        x_axis,
+        training_wo_24,
+        label="Training error, 24 components without augmentation",
+        linestyle=":",
+        color="firebrick",
+    )
+    ax2.plot(
+        x_axis,
+        training_24,
+        label="Training error, 24 components without augmentation",
+        linestyle=":",
+        color="mediumblue",
+    )
+
+    ax1.set(xlabel="# of iterations", ylabel="Validation Dataset Error")
+    ax1.set_title("GMM errors with respect to augmentation")
+
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right")
+
+    plt.grid(True)
+    plt.savefig("gmm_errors.png")
+
+
+def plot_augmented_training_results():
     scores_16 = load_scores("models/gmm_16.results")
     scores_24 = load_scores("models/gmm_24.results")
     scores_32 = load_scores("models/gmm_32.results")
@@ -79,3 +126,8 @@ if __name__ == "__main__":
 
     plt.grid(True)
     plt.savefig("gmm_errors.png")
+
+
+if __name__ == "__main__":
+    # plot_augmented_training_results()
+    plot_comparison_between_augmented_and_not()
