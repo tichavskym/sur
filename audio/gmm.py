@@ -131,12 +131,16 @@ def parse_arguments():
     subparsers = parser.add_subparsers(dest="subcommand")
     train = subparsers.add_parser("train")
     train.add_argument("model_filename")
-    evaluate = subparsers.add_parser("eval")
+    evaluate = subparsers.add_parser("classify")
     evaluate.add_argument("model_filename")
+    evaluate.add_argument("dir_name")
     return parser.parse_args()
 
 
-def evaluate_model(model_filename: str, target_dir: str, non_target_dir: str):
+def classify(model_filename: str, dir_name: str):
+    """
+    Load model from `model_filename` and classify data in `dirname`. Print results to stdout.
+    """
     model = np.load(model_filename)
     weights = model["weights"]
     means = model["means"]
@@ -145,10 +149,7 @@ def evaluate_model(model_filename: str, target_dir: str, non_target_dir: str):
     nmeans = model["nmeans"]
     ncovs = model["ncovs"]
 
-    # Evaluation
-    recordings = load_recordings(target_dir)
-    evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
-    recordings = load_recordings(non_target_dir)
+    recordings = load_recordings(dir_name)
     evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
 
 
@@ -196,7 +197,7 @@ if __name__ == "__main__":
             ncovs=ncovs,
         )
 
-    elif args.subcommand == "eval":
-        evaluate_model(args.model_filename, "data/target_dev", "data/non_target_dev")
+    elif args.subcommand == "classify":
+        classify(args.model_filename, args.dir_name)
     else:
         raise ValueError("Invalid subcommand")

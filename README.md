@@ -16,7 +16,7 @@ Then, download the training dataset [from URL](https://www.fit.vutbr.cz/study/co
 extract it into `data/` directory.
 
 If you want to use audio augmentation, download [Room Impulse Response and Noise Database](https://www.openslr.org/28/)
-and extract it into `RIRS_NOISES/` directory. 
+and extract it into `RIRS_NOISES/` directory.
 
 ## Usage
 
@@ -27,10 +27,11 @@ To train and evaluate Gaussian Mixture Model (GMM) for speaker recognition, run 
 # The parameters for training can be tuned from within the script
 python audio/gmm.py train gmm_model.npz
 
-# Evaluate your model
+# Use your model to classify data on final dataset located in evaluation_dataset/eval
 # WARNING: never load models from untrusted sources, loading of the model is not secure
 # against erroneous or maliciously constructed data (uses pickle.load under the hood)
-python audio/gmm.py eval gmm_model.npz
+python audio/gmm.py classify models/gmm_audio_24_27.npz evaluation_dataset/eval \
+  > results/gmm_audio_24_27.txt
 ```
 
 To train and evaluate the ResNet18 model for the person recognition, run the following commands:
@@ -39,7 +40,7 @@ To train and evaluate the ResNet18 model for the person recognition, run the fol
 # Train the model
 python images_resnet/train_resnet.py --dataset /path/to/the/dataset/dir/
 
-# Evaluate the model
+# Use the model to classify data
 python images_resnet/eval_resnet.py --model /path/to/models/model_checkpoint.pt --dataset /path/to/the/dataset/dir/
 
 # Plot statistics
