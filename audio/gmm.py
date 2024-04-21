@@ -137,7 +137,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def classify(model_filename: str, dir_name: str):
+def classify(model_filename: str, dir_name: str, augmentation=False):
     """
     Load model from `model_filename` and classify data in `dirname`. Print results to stdout.
     """
@@ -149,7 +149,7 @@ def classify(model_filename: str, dir_name: str):
     nmeans = model["nmeans"]
     ncovs = model["ncovs"]
 
-    recordings = load_recordings(dir_name)
+    recordings = load_recordings(dir_name, augmentation=augmentation)
     evaluate(recordings, weights, means, covs, nweights, nmeans, ncovs)
 
 
