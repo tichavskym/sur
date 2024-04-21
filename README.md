@@ -34,13 +34,13 @@ To train and evaluate the ResNet18 model for the person recognition, run the fol
 
 ```sh
 # Train the model
-python src/images_resnet/train_resnet.py --dataset /path/to/the/dataset/dir/
+python images_resnet/train_resnet.py --dataset /path/to/the/dataset/dir/
 
 # Evaluate the model
-python src/images_resnet/eval_resnet.py --model /path/to/models/model_checkpoint.pt --dataset /path/to/the/dataset/dir/
+python images_resnet/eval_resnet.py --model /path/to/models/model_checkpoint.pt --dataset /path/to/the/dataset/dir/
 
 # Plot statistics
-python3 src/images_resnet/plotting.py
+python3 images_resnet/plotting.py
 ```
 
 ## Audio training evaluation
