@@ -71,8 +71,8 @@ python3 utils/eval_combined_model.py --gmm \
 To generate the final report, install `pandoc` and `latex` and execute
 
 ```shell
-pandoc README.md --metadata-file doc/pandoc-metadata.yml -s -o \
-  doc/dokumentace.pdf
+pandoc README.md --pdf-engine=xelatex --metadata-file doc/pandoc-metadata.yml \
+  -s -o doc/dokumentace.pdf
 ```
 
 ## Audio model
