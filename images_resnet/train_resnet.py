@@ -165,7 +165,7 @@ class ResNet18(nn.Module):
         return self.resnet(x)
 
 # Function for training the model, evaluation and final testing.
-def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0.0001, num_folds=5):    
+def train_and_save_model(data_dir, num_epochs=20, batch_size=32, learning_rate=0.0001):    
     # Create custom training and validation dataset.
     dataset = TrainingValidationDataset(data_dir)
 
