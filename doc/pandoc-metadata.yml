@@ -8,4 +8,6 @@ geometry:
   - left=20mm
   - right=20mm
   - bottom=30mm
+mainfont: "DejaVu Sans"
+
 ---
