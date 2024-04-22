@@ -100,6 +100,11 @@ we selected for further use is located at `models/gmm_audio_24_27.npz` (24 compo
 
 ## Image training model
 
+For images, the ResNet18 model was used. The model was trained using the split of the training and validation dataset. The data was augmented using dynamic On-the-Fly augmentation with an augmentation probability of 0.8. The validation loss and accuracy were calculated using the augmented validation data too. The final evaluation was made on clean examples (without any augmentation). The augmented techniques were used such as blurring, changing contrast or saturation, flipping, etc.
+
+The final model uses the Early Stopping method for choosing the best model. The saved model was trained for ```15``` of ```20``` epochs in total. The chosen hyperparameters were set: ```batch_size=32```, ```learning_rate=0.0001```. With that, the Adam optimizer was used including L2 regularization with the ```weight_decay``` parameter set as ```1e-5```.
+
+
 See the following figure for the performance of the ResNet18 model (train and validation loss and validation accuracy).
 
 ![ResNet18 performance](doc/resnet_stats.png)
@@ -107,7 +112,9 @@ See the following figure for the performance of the ResNet18 model (train and va
 The model we selected for further use is located at `models/resnet_image_15_20.pt` (saved at 15 epochs of 20 epochs
 totally) chosen using the Early Stopping approach.
 
-| Model | Epochs | Learning Rate | Batch Size | Random Augmentation | Augmentation Probability| K-Folds | Early Stopping (Epochs saved) | Scheduler (Step Size, Gamma) | Validation Accuracy |
+The following table captures the list of best performance models that have been tried.
+
+| Model | Epochs | Learning Rate | Batch Size | Random Augmentation | Augmentation Probability| K-Folds | Early Stopping (Epochs saved) | StepLR Scheduler (Step Size, Gamma) | Validation Accuracy |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | ResNet18 | 20 | 0.001 | 32 | &cross; | 0.0 | &check; | &cross; | &cross; | 0.9 |
 | ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &cross; | &cross; | &cross; | 0.9143 |
@@ -115,7 +122,7 @@ totally) chosen using the Early Stopping approach.
 | ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &check; | &cross; | &cross; | 0.8714 |
 | ResNet18 | 20 | 0.0001 | 32 | &check; | 0.6 | &cross; | &cross; | &cross; | 0.9286 |
 | ResNet18 | 20 | 0.0001 | 16 | &check; | 0.8 | &cross; | &cross; | &cross; | 0.8571 |
-| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (15/20) | &cross; | 0.9857 |
+| ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (15/20) | &cross; | **0.9857** |
 | ResNet18 | 20 | 0.0001 | 32 | &check; | 0.6 | &cross; | &check; (17/20) | &cross; | 0.8857 |
 | ResNet18 | 20 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (16/20) | &check; (5, 0.1) | 0.9000 |
 | ResNet18 | 20 | 0.001 | 32 | &check; | 0.8 | &cross; | &check; (14/20) | &check; (5, 0.5) | 0.8143 |
@@ -123,7 +130,32 @@ totally) chosen using the Early Stopping approach.
 | ResNet18 | 30 | 0.0001 | 32 | &check; | 0.8 | &cross; | &check; (24/30) | &cross; | 0.8714 |
 
 - *Random Augmentation* denotes dynamic On-the-Fly Augmentation.
-- *K-Folds* denotes the cross-validation.
+- *K-Folds* denotes the cross-validation approach tried.
+- *Early Stopping* - the saved epochs means in which epoch the final model was saved.
+
+To improve the image model performance of the larger dataset the deeper and larger ResNet model should be used (such as ResNet50, etc.). Of course, a wider range of augmentation techniques could be used.
+
+## Combined model
+The combined model uses both systems for audio (GMM) and images (ResNet18). The combination of the models can be obtained using the three approaches. All of these approaches calculate the final probability as follows:
+
+$P_{COMB} = w_{GMM} * P_{GMM} + w_{RESNET} * P_{RESNET}$
+
+The evaluation script is saved in ```utils/eval_combined_model.py```.
+
+### Even distribution
+The weights for probabilities of models are chosen as $w_{GMM} = w_{RESNET} = 0.5$.
+
+### Weights training using predictions
+
+The code is saved in the ```utils/train_models_weights_pred.py``` file and the weights are calculated using the addition rewards, if some of the models are correct and the others are not such that if one model is completely right and the other wrong, the first model weight would be one and the others zero. The training was made using the development dataset part to calculate the weight using the unseen data.
+
+### Weights training using probabilities
+
+The code is saved in the ```utils/train_models_weights_prob.py``` file. The weights are obtained using the probability system with rewards and penalties. The two systems are evaluated independently such that if the system is correct, it gets a reward for how much the prediction was far from the 0.5 threshold. If wrong, the same range is the penalty. The two trained models are finally recalculated such that the sum of weights is one. The training was made using the development dataset part to calculate the weight using the unseen data.
+
+For the final evaluation, the even distribution model was chosen and two other models were used using the second weights calculation approach (using the probabilities). One forward model was chosen ($w_{RESNET} = 0.66$ and $w_{GMM} = 0.33$ approximately), and one which used the calculated weights conversely ($w_{RESNET} = 0.33$ and $w_{GMM} = 0.66$ approximately).
+
+To improve the combined model performance, outside of sub-model improvements, advanced training techniques for weights could be used. With that, the larger dataset for weight training should be used (we used the development dataset of about 50 examples).
 
 ## Results
 The project documentation is located in ```doc/dokumentace.pdf```.
