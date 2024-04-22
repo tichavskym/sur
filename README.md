@@ -98,9 +98,9 @@ okay with initializing both mixtures with more components than 10 (to simplify d
 For our runs, clearly the most performant and the best converging models are those with 24 components. The model 
 we selected for further use is located at `models/gmm_audio_24_27.npz` (24 components, 27 iterations).
 
-## Image training model
+## Image model
 
-For images, the ResNet18 model was used. The model was trained using the split of the training and validation dataset. The data was augmented using dynamic On-the-Fly augmentation with an augmentation probability of 0.8. The validation loss and accuracy were calculated using the augmented validation data too. The final evaluation was made on clean examples (without any augmentation). The augmented techniques were used such as blurring, changing contrast or saturation, flipping, etc.
+For images, the ResNet18 model was used. The model was trained using the split of the training and validation dataset. The data was augmented using dynamic on the fly augmentation with an augmentation probability of 0.8. The validation loss and accuracy were calculated using the augmented validation data too. The final evaluation was made on clean examples (without any augmentation). The augmentation techniques used were blurring, changing contrast and saturation, flipping, etc.
 
 The final model uses the Early Stopping method for choosing the best model. The saved model was trained for ```15``` of ```20``` epochs in total. The chosen hyperparameters were set: ```batch_size=32```, ```learning_rate=0.0001```. With that, the Adam optimizer was used including L2 regularization with the ```weight_decay``` parameter set as ```1e-5```.
 
@@ -112,7 +112,7 @@ See the following figure for the performance of the ResNet18 model (train and va
 The model we selected for further use is located at `models/resnet_image_15_20.pt` (saved at 15 epochs of 20 epochs
 totally) chosen using the Early Stopping approach.
 
-The following table captures the list of best performance models that have been tried.
+The following table captures the list of the best models that have been trained.
 
 | Model | Epochs | Learning Rate | Batch Size | Random Augmentation | Augmentation Probability| K-Folds | Early Stopping (Epochs saved) | StepLR Scheduler (Step Size, Gamma) | Validation Accuracy |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -133,9 +133,10 @@ The following table captures the list of best performance models that have been 
 - *K-Folds* denotes the cross-validation approach tried.
 - *Early Stopping* - the saved epochs means in which epoch the final model was saved.
 
-To improve the image model performance of the larger dataset the deeper and larger ResNet model should be used (such as ResNet50, etc.). Of course, a wider range of augmentation techniques could be used.
+To improve the image model performance on larger datasets, a deeper and larger ResNet model should be used (such as ResNet50, etc.).
 
 ## Combined model
+
 The combined model uses both systems for audio (GMM) and images (ResNet18). The combination of the models can be obtained using the three approaches. All of these approaches calculate the final probability as follows:
 
 $P_{COMB} = w_{GMM} * P_{GMM} + w_{RESNET} * P_{RESNET}$
@@ -147,7 +148,7 @@ The weights for probabilities of models are chosen as $w_{GMM} = w_{RESNET} = 0.
 
 ### Weights training using predictions
 
-The code is saved in the ```utils/train_models_weights_pred.py``` file and the weights are calculated using the addition rewards, if some of the models are correct and the others are not such that if one model is completely right and the other wrong, the first model weight would be one and the others zero. The training was made using the development dataset part to calculate the weight using the unseen data.
+The code is saved in the ```utils/train_models_weights_pred.py``` file and the weights are calculated using the addition rewards, if some of the models are correct and the others are not such that if one model is completely right and the other wrong, the first model weight would be one and the others zero. The training was done using the development dataset part to calculate the weight using the unseen data.
 
 ### Weights training using probabilities
 
