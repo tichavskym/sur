@@ -159,14 +159,33 @@ For the final evaluation, the even distribution model was chosen and two other m
 To improve the combined model performance, outside of sub-model improvements, advanced training techniques for weights could be used. With that, the larger dataset for weight training should be used (we used the development dataset of about 50 examples).
 
 ## Results
-The project documentation is located in ```doc/dokumentace.pdf```.
 
-The results evaluations containing the five systems are located in ```results/``` folder. The files contain the following systems:
+The submitted models are the following:
 
-| System                     | Description |
-| ---                        | ---         |
-| gmm_audio_24_27.txt        | The system which uses only the GMM audio model.      |
-| resnet_image_15_20.txt     | The system which uses only the ResNet18 image model. |
-| gmm_resnet_0_5.txt         | The system uses both models. The weight for both model's probabilities is 0.5. |
-| gmm_resnet_0_66_gmm.txt    | The system uses both models. GMM probability weight: 0.6618765075622808, ResNet18 probability weight: 0.3381234924377192. |
-| gmm_resnet_0_66_resnet.txt | The system uses both models. ResNet18 probability weight: 0.6618765075622808, GMM probability weight: 0.3381234924377192. |
+| System                     | Description                                                                                       |
+| ---                        |---------------------------------------------------------------------------------------------------|
+| gmm_audio_24_27.txt        | The system which uses only the GMM audio model.                                                   |
+| resnet_image_15_20.txt     | The system which uses only the ResNet18 image model.                                              |
+| gmm_resnet_0_5.txt         | The system uses both models. The weight for both model's probabilities is 0.5.                    |
+| gmm_resnet_0_66_gmm.txt    | The system uses both models. GMM probability weight: 0.6619, ResNet18 probability weight: 0.3381. |
+| gmm_resnet_0_66_resnet.txt | The system uses both models. ResNet18 probability weight: 0.6619, GMM probability weight: 0.3381. |
+
+The resulting evaluations of provided test dataset can be found in `results/` directory.
+
+Comparing it with the ground truths, we get the following model performance:
+
+| Model                      | Accuracy | Cdet  | minCdet | ERR   |
+|----------------------------|----------|-------|---------|-------|
+| gmm_audio_24_27.txt        | 90.76%   | 32.88 | 30.27   | 32.49 |
+| gmm_resnet_0_5.txt         | 92.10%   | 32.89 | 24.54   | 26.67 |
+| gmm_resnet_0_66_gmm.txt    | 92.32%   | 34.65 | 25.30   | 26.75 |
+| gmm_resnet_0_66_resnet.txt | 91.95%   | 33.35 | 23.68   | 25.85 |
+| resnet_image_15_20.txt     | 90.90%   | 32.80 | 28.97   | 33.98 |
+
+where
+
+- `Cdet = (P_miss_positives + P_false_negatives) / 2`,
+  - `P_miss_positives = (# of miss positive) / (# of positives)`,
+  - `P_false_negatives = (# of false negatives) / (# of negatives)`,
+- `minCdef` - the best possible `Cdet` found based on score,
+- `ERR` - the Equal Error Rate.
